@@ -108,6 +108,7 @@ module soc_ifc_top
     output logic cptra_uc_rst_b,
     //Clock gating
     output logic clk_gating_en,
+    output logic rdc_clk_dis,
 
     //caliptra uncore jtag ports
     input  logic                            cptra_uncore_dmi_reg_en,
@@ -227,7 +228,8 @@ soc_ifc_boot_fsm i_soc_ifc_boot_fsm (
     .cptra_noncore_rst_b(cptra_noncore_rst_b), //goes to all other blocks
     .cptra_uc_rst_b(cptra_uc_rst_b), //goes to veer core
     .iccm_unlock(iccm_unlock),
-    .fw_upd_rst_executed(fw_upd_rst_executed)
+    .fw_upd_rst_executed(fw_upd_rst_executed),
+    .rdc_clk_dis(rdc_clk_dis)
 );
 
 always_comb soc_ifc_reg_hwif_in.CPTRA_RESET_REASON.FW_UPD_RESET.we = fw_upd_rst_executed;
@@ -743,8 +745,8 @@ always_comb t1_timeout_p = t1_timeout & ~t1_timeout_f;
 always_comb t2_timeout_p = t2_timeout & ~t2_timeout_f;
 
 //Detect falling edge on soc_ifc_error_intr to indicate that the interrupt has been serviced
-always_ff @(posedge clk or negedge cptra_rst_b) begin
-    if(!cptra_rst_b) begin
+always_ff @(posedge clk or negedge cptra_noncore_rst_b) begin
+    if(!cptra_noncore_rst_b) begin
         soc_ifc_error_intr_f <= 'b0;
     end
     else begin

@@ -17,6 +17,7 @@ module clk_gate (
     input logic cptra_rst_b,
     input logic psel,
     input logic clk_gate_en,
+    input logic rdc_clk_dis,
     input logic cpu_halt_status,
     input logic [63:0] generic_input_wires,
     output logic clk_cg,
@@ -64,8 +65,8 @@ end
 //Generate clk disable signal
 always_comb begin
     change_in_generic_wires = ((generic_input_wires ^ generic_input_wires_f) != 'h0);
-    disable_clk             = clk_gate_en && (cpu_halt_status && !change_in_generic_wires);
-    disable_soc_ifc_clk     = clk_gate_en && (cpu_halt_status && !psel && !change_in_generic_wires);
+    disable_clk             = (clk_gate_en && (cpu_halt_status && !change_in_generic_wires)) | rdc_clk_dis;
+    disable_soc_ifc_clk     = (clk_gate_en && (cpu_halt_status && !psel && !change_in_generic_wires)) | rdc_clk_dis;
 end
 
 
