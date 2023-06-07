@@ -808,7 +808,7 @@ always_comb cptra_uncore_dmi_reg_rdata_in = ({32{(cptra_uncore_dmi_reg_addr == D
 //This assumes that reg_en goes low between read accesses
 always_comb dmi_inc_rdptr = cptra_uncore_dmi_reg_dout_access_f & ~cptra_uncore_dmi_reg_en;
 
-always_ff @(posedge clk or negedge cptra_pwrgood) begin
+always_ff @(posedge clk_cg or negedge cptra_pwrgood) begin
     if (~cptra_pwrgood) begin
         cptra_uncore_dmi_reg_rdata <= '0;
         cptra_uncore_dmi_reg_dout_access_f <= '0;
