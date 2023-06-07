@@ -186,6 +186,7 @@ module caliptra_top
     logic [31:0]                cptra_uncore_dmi_reg_wdata;
     security_state_t            cptra_security_state_Latched;
     
+    logic                       fw_update_rst_window;
 
     logic iccm_lock;
 
@@ -300,6 +301,7 @@ end
     ahb_lite_bus_i (
         .hclk                          ( clk_cg                      ),
         .hreset_n                      ( cptra_noncore_rst_b         ),
+        .force_bus_idle                ( fw_update_rst_window        ),
         .ahb_lite_responders           ( responder_inst              ),
         .ahb_lite_initiator            ( initiator_inst              ),
         .ahb_lite_resp_disable_i       ( ahb_lite_resp_disable       ),
@@ -1146,6 +1148,7 @@ soc_ifc_top1
     //Clock gating en
     .clk_gating_en(clk_gating_en),
     .rdc_clk_dis(rdc_clk_dis),
+    .fw_update_rst_window(fw_update_rst_window),
 
     //caliptra uncore jtag ports
     .cptra_uncore_dmi_reg_en   ( cptra_uncore_dmi_reg_en ),

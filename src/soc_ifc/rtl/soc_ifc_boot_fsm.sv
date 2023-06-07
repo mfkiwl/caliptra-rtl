@@ -35,7 +35,8 @@ module soc_ifc_boot_fsm
     output logic cptra_uc_rst_b, //Global + fw update rst that goes to VeeR core only,
     output logic iccm_unlock,
     output logic fw_upd_rst_executed,
-    output logic rdc_clk_dis
+    output logic rdc_clk_dis,
+    output logic fw_update_rst_window
 );
 
 `include "caliptra_sva.svh"
@@ -65,7 +66,6 @@ logic wait_count_rst;
 logic wait_count_decr;
 
 logic cptra_rst_window;
-logic fw_update_rst_window;
 
 //move to fuse state when SoC de-asserts reset
 always_comb arc_BOOT_IDLE_BOOT_FUSE = (boot_fsm_ps == BOOT_IDLE) & ~cptra_rst_window;
@@ -83,7 +83,7 @@ always_comb arc_IDLE = cptra_rst_window;
 
 always_comb fw_update_rst_window = arc_BOOT_DONE_BOOT_FWRST | (boot_fsm_ps == BOOT_FW_RST);
 
-always_comb rdc_clk_dis = cptra_rst_window | fw_update_rst_window;
+always_comb rdc_clk_dis = cptra_rst_window;
 
 //move to rst state when reg bit is set to 1. This state will assert fw_rst to uc
 always_comb arc_BOOT_DONE_BOOT_FWRST = (boot_fsm_ps == BOOT_DONE) & fw_update_rst;
