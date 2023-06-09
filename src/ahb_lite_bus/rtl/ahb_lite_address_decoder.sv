@@ -142,9 +142,10 @@ module ahb_lite_address_decoder #(
     end
 
     // Drive the address phase of the AHB Lite Transaction
+    // For RDC force ready signal when we force the bus idle
     always_comb begin
         for (int rr = 0; rr < NUM_RESPONDERS; rr++) begin
-            hresponderready_o[rr]    = hinitiator_ready_int;
+            hresponderready_o[rr]    = hinitiator_ready_int | force_bus_idle;
             hwrite_o[rr]             = hwrite_i;
             htrans_o[rr]             = htrans_i;
             hsize_o[rr]              = hsize_i;
