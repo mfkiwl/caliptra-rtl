@@ -121,6 +121,7 @@ module caliptra_top
 
     //clock gating signals
     logic                       clk_gating_en   ;
+    logic                       rdc_clk_dis     ;
     logic                       clk_cg          ;
     logic                       soc_ifc_clk_cg  ;
 
@@ -185,6 +186,7 @@ module caliptra_top
     logic [31:0]                cptra_uncore_dmi_reg_wdata;
     security_state_t            cptra_security_state_Latched;
     
+    logic                       fw_update_rst_window;
 
     logic iccm_lock;
 
@@ -310,6 +312,7 @@ end
     ahb_lite_bus_i (
         .hclk                          ( clk_cg                      ),
         .hreset_n                      ( cptra_noncore_rst_b         ),
+        .force_bus_idle                ( fw_update_rst_window        ),
         .ahb_lite_responders           ( responder_inst              ),
         .ahb_lite_initiator            ( initiator_inst              ),
         .ahb_lite_resp_disable_i       ( ahb_lite_resp_disable       ),
@@ -571,8 +574,8 @@ el2_veer_wrapper rvtop (
     );
 
     // Security State value captured on a Caliptra reset deassertion (0->1 signal transition)
-    always_ff @(posedge clk or negedge cptra_rst_b) begin
-        if (~cptra_rst_b) begin
+    always_ff @(posedge clk or negedge cptra_noncore_rst_b) begin
+        if (~cptra_noncore_rst_b) begin
             cptra_security_state_Latched <= '{device_lifecycle: DEVICE_PRODUCTION, debug_locked: 1'b1}; //Setting the default value to be debug locked and in production mode
             security_state_f <= '{device_lifecycle: DEVICE_PRODUCTION, debug_locked: 1'b1}; //Setting the default value to be debug locked and in production mode
             cptra_security_state_captured <= 0;
@@ -612,6 +615,7 @@ clk_gate cg (
     .psel(PSEL),
     .clk_gate_en(clk_gating_en),
     .cpu_halt_status(o_cpu_halt_status),
+    .rdc_clk_dis(rdc_clk_dis),
     .clk_cg (clk_cg),
     .soc_ifc_clk_cg (soc_ifc_clk_cg),
     .generic_input_wires(generic_input_wires)
@@ -1200,6 +1204,8 @@ soc_ifc_top1
     .cptra_uc_rst_b (cptra_uc_rst_b),
     //Clock gating en
     .clk_gating_en(clk_gating_en),
+    .rdc_clk_dis(rdc_clk_dis),
+    .fw_update_rst_window(fw_update_rst_window),
 
     //caliptra uncore jtag ports
     .cptra_uncore_dmi_reg_en   ( cptra_uncore_dmi_reg_en ),

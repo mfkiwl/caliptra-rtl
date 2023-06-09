@@ -108,6 +108,8 @@ module soc_ifc_top
     output logic cptra_uc_rst_b,
     //Clock gating
     output logic clk_gating_en,
+    output logic rdc_clk_dis,
+    output logic fw_update_rst_window,
 
     //caliptra uncore jtag ports
     input  logic                            cptra_uncore_dmi_reg_en,
@@ -227,7 +229,9 @@ soc_ifc_boot_fsm i_soc_ifc_boot_fsm (
     .cptra_noncore_rst_b(cptra_noncore_rst_b), //goes to all other blocks
     .cptra_uc_rst_b(cptra_uc_rst_b), //goes to veer core
     .iccm_unlock(iccm_unlock),
-    .fw_upd_rst_executed(fw_upd_rst_executed)
+    .fw_upd_rst_executed(fw_upd_rst_executed),
+    .rdc_clk_dis(rdc_clk_dis),
+    .fw_update_rst_window(fw_update_rst_window)
 );
 
 always_comb soc_ifc_reg_hwif_in.CPTRA_RESET_REASON.FW_UPD_RESET.we = fw_upd_rst_executed;
@@ -320,7 +324,7 @@ soc_ifc_arb #(
     )
     i_soc_ifc_arb (
     .clk(soc_ifc_clk_cg),
-    .rst_b(cptra_rst_b),
+    .rst_b(cptra_noncore_rst_b),
     .valid_mbox_users(valid_mbox_users),
     //UC inf
     .uc_req_dv(uc_req_dv), 
@@ -363,7 +367,7 @@ soc_ifc_arb #(
 //Read and Write permissions are controlled within this block
 always_comb soc_ifc_reg_error = soc_ifc_reg_read_error | soc_ifc_reg_write_error;
 
-always_comb soc_ifc_reg_hwif_in.cptra_rst_b = cptra_rst_b;
+always_comb soc_ifc_reg_hwif_in.cptra_rst_b = cptra_noncore_rst_b;
 always_comb soc_ifc_reg_hwif_in.cptra_pwrgood = cptra_pwrgood;
 always_comb soc_ifc_reg_hwif_in.soc_req = soc_ifc_reg_req_data.soc_req;
 
@@ -728,8 +732,8 @@ always_comb begin
 end
 
 //Generate t1 and t2 timeout interrupt pulse
-always_ff @(posedge clk or negedge cptra_rst_b) begin
-    if(!cptra_rst_b) begin
+always_ff @(posedge clk or negedge cptra_noncore_rst_b) begin
+    if(!cptra_noncore_rst_b) begin
         t1_timeout_f <= 'b0;
         t2_timeout_f <= 'b0;
     end
@@ -743,8 +747,8 @@ always_comb t1_timeout_p = t1_timeout & ~t1_timeout_f;
 always_comb t2_timeout_p = t2_timeout & ~t2_timeout_f;
 
 //Detect falling edge on soc_ifc_error_intr to indicate that the interrupt has been serviced
-always_ff @(posedge clk or negedge cptra_rst_b) begin
-    if(!cptra_rst_b) begin
+always_ff @(posedge clk or negedge cptra_noncore_rst_b) begin
+    if(!cptra_noncore_rst_b) begin
         soc_ifc_error_intr_f <= 'b0;
     end
     else begin
@@ -804,7 +808,7 @@ always_comb cptra_uncore_dmi_reg_rdata_in = ({32{(cptra_uncore_dmi_reg_addr == D
 //This assumes that reg_en goes low between read accesses
 always_comb dmi_inc_rdptr = cptra_uncore_dmi_reg_dout_access_f & ~cptra_uncore_dmi_reg_en;
 
-always_ff @(posedge clk or negedge cptra_pwrgood) begin
+always_ff @(posedge clk_cg or negedge cptra_pwrgood) begin
     if (~cptra_pwrgood) begin
         cptra_uncore_dmi_reg_rdata <= '0;
         cptra_uncore_dmi_reg_dout_access_f <= '0;
