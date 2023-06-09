@@ -312,7 +312,7 @@ end
     ahb_lite_bus_i (
         .hclk                          ( clk_cg                      ),
         .hreset_n                      ( cptra_noncore_rst_b         ),
-        .force_bus_idle                ( fw_update_rst_window        ),
+        .force_bus_idle                ( 1'b0                        ),
         .ahb_lite_responders           ( responder_inst              ),
         .ahb_lite_initiator            ( initiator_inst              ),
         .ahb_lite_resp_disable_i       ( ahb_lite_resp_disable       ),
@@ -537,7 +537,7 @@ el2_veer_wrapper rvtop (
         .hreset_n            (cptra_noncore_rst_b),
 
         // Initiator 0
-        .hsel_i_0            (1'b1          ),
+        .hsel_i_0            (~fw_update_rst_window),
         .haddr_i_0           (lsu_ahb.haddr ),
         .hwdata_i_0          (lsu_ahb.hwdata),
         .hwrite_i_0          (lsu_ahb.hwrite),
