@@ -56,8 +56,10 @@ module ahb_lite_address_decoder #(
     output logic    [NUM_RESPONDERS-1:0][1:0]                       htrans_o,
     output logic    [NUM_RESPONDERS-1:0][2:0]                       hsize_o,
 
+    input logic     force_bus_idle,
+
     // ----------------------------------------------
-    // Respnder Disable
+    // Responder Disable
     // ----------------------------------------------
     input logic     [NUM_RESPONDERS-1:0]                            responder_disable_i,
     output logic    [NUM_RESPONDERS-1:0]                            access_blocked_o,
@@ -90,7 +92,7 @@ module ahb_lite_address_decoder #(
     genvar resp_num;
     generate
         for (resp_num = 0; resp_num < NUM_RESPONDERS; resp_num++) begin: gen_responder_hsel
-            assign hsel_o_int_pre[resp_num] = (haddr_i >= responder_start_addr_i[resp_num]) && (haddr_i <= responder_end_addr_i[resp_num]);
+            assign hsel_o_int_pre[resp_num] = ~force_bus_idle && (haddr_i >= responder_start_addr_i[resp_num]) && (haddr_i <= responder_end_addr_i[resp_num]);
             assign hsel_blocked  [resp_num] = hsel_o_int_pre[resp_num] &&  responder_disable_i[resp_num];
             assign hsel_o_int    [resp_num] = hsel_o_int_pre[resp_num] && !responder_disable_i[resp_num];
         end
@@ -140,9 +142,10 @@ module ahb_lite_address_decoder #(
     end
 
     // Drive the address phase of the AHB Lite Transaction
+    // For RDC force ready signal when we force the bus idle
     always_comb begin
         for (int rr = 0; rr < NUM_RESPONDERS; rr++) begin
-            hresponderready_o[rr]    = hinitiator_ready_int;
+            hresponderready_o[rr]    = hinitiator_ready_int | force_bus_idle;
             hwrite_o[rr]             = hwrite_i;
             htrans_o[rr]             = htrans_i;
             hsize_o[rr]              = hsize_i;
