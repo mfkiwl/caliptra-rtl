@@ -21,7 +21,8 @@
 
 module ahb_lite_2to1_mux #(
     parameter AHB_LITE_ADDR_WIDTH   = 32,
-    parameter AHB_LITE_DATA_WIDTH   = 32
+    parameter AHB_LITE_DATA_WIDTH   = 32,
+    parameter AHB_NO_OPT = 0
 ) (
     // ---------------------------------------
     // Global clock/reset
@@ -143,12 +144,25 @@ always_comb initiator1_hsize = initiator1_pend_addr_ph ? initiator1_pend_hsize :
 always_comb initiator1_hwrite = initiator1_pend_addr_ph ? initiator1_pend_hwrite : hwrite_i_1;
 
 //Select the appropriate initiator
-//Initiator 0 gets priority
-//Stall the grant if initiator 1 is processing a data phase and address phase b2b
-always_comb initiator0_gnt = (initiator0_address_ph | initiator0_pend_addr_ph) & hreadyout_i;
+generate
+    if (AHB_NO_OPT) begin
+        //no optimization, data phase must complete before driving new address phase
+        //Initiator 0 gets priority
+        //Stall the grant only if initiator 1 is on its data phase
+        always_comb initiator0_gnt = (initiator0_address_ph | initiator0_pend_addr_ph) & ~initiator1_data_ph;
 
-//Initiator 1 gets through only if initiator 0 isn't getting granted
-always_comb initiator1_gnt = (initiator1_address_ph | initiator1_pend_addr_ph) & hreadyout_i & ~initiator0_gnt;
+        //Initiator 1 gets through only if initiator 0 address phase isn't getting gnt, or in data phase
+        always_comb initiator1_gnt = (initiator1_address_ph | initiator1_pend_addr_ph) & ~initiator0_data_ph & ~initiator0_gnt;
+    end else begin
+        //optimized to allow addr phase to overlap data phase, assumes no stalls
+        //Initiator 0 gets priority
+        //Stall the grant if initiator 1 is processing a data phase and address phase b2b
+        always_comb initiator0_gnt = (initiator0_address_ph | initiator0_pend_addr_ph);
+
+        //Initiator 1 gets through only if initiator 0 isn't getting granted
+        always_comb initiator1_gnt = (initiator1_address_ph | initiator1_pend_addr_ph) & ~initiator0_gnt;
+    end
+endgenerate
 
 //Mux the appropriate initiator and send out
 //Keep driving initiator 1 controls on data phase if init0 isn't getting a grant in that cycle

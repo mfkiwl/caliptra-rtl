@@ -80,6 +80,7 @@ module ahb_lite_address_decoder #(
     logic [NUM_RESPONDERS-1:0]                          pending_hsel;
     logic                                               hinitiator_ready_default;
     logic                                               hinitiator_ready_int;
+    logic                                               hinitiator_ready_int_q;
     logic [NUM_RESPONDERS-1:0]                          hsel_o_int_pre;
     logic [NUM_RESPONDERS-1:0]                          hsel_blocked;
     logic [NUM_RESPONDERS-1:0]                          hsel_o_int;
@@ -102,7 +103,7 @@ module ahb_lite_address_decoder #(
     always @(posedge hclk or negedge hreset_n) begin
         if (!hreset_n)
             access_blocked_o <= '0;
-        else if (|htrans_i && hinitiator_ready_int && |hsel_blocked)
+        else if (|htrans_i && hinitiator_ready_int_q && |hsel_blocked)
             access_blocked_o <= hsel_blocked;
         else
             access_blocked_o <= '0;
@@ -111,16 +112,16 @@ module ahb_lite_address_decoder #(
     always @(posedge hclk or negedge hreset_n) begin
         if (!hreset_n)
             pending_hsel    <= '0;
-        else if (|htrans_i && hinitiator_ready_int)
+        else if (|htrans_i && hinitiator_ready_int_q)
             pending_hsel    <= hsel_o_int;
-        else if (hinitiator_ready_int)
+        else if (hinitiator_ready_int_q)
             pending_hsel    <= '0;
     end
 
     always_comb begin
         // Only flag errors for NONSEQ or SEQ type transfers
         // (BUSY transfers require OKAY response)
-        hresp_error = htrans_i inside {AHB_XFER_NONSEQ, AHB_XFER_SEQ} && hinitiator_ready_int && ~|hsel_o_int;
+        hresp_error = htrans_i inside {AHB_XFER_NONSEQ, AHB_XFER_SEQ} && hinitiator_ready_int_q && ~|hsel_o_int;
     end
 
     always @(posedge hclk or negedge hreset_n) begin
@@ -135,7 +136,7 @@ module ahb_lite_address_decoder #(
             hresp_error_r <= 1'b0;
         else if (hresp_error)
             hresp_error_r <= 1'b1;
-        else if (hinitiator_ready_int)
+        else if (hinitiator_ready_int_q)
             hresp_error_r <= 1'b0;
         else
             hresp_error_r <= hresp_error_r;
@@ -145,7 +146,7 @@ module ahb_lite_address_decoder #(
     // For RDC force ready signal when we force the bus idle
     always_comb begin
         for (int rr = 0; rr < NUM_RESPONDERS; rr++) begin
-            hresponderready_o[rr]    = hinitiator_ready_int | force_bus_idle;
+            hresponderready_o[rr]    = hinitiator_ready_int_q;
             hwrite_o[rr]             = hwrite_i;
             htrans_o[rr]             = htrans_i;
             hsize_o[rr]              = hsize_i;
@@ -174,10 +175,11 @@ module ahb_lite_address_decoder #(
                 hinitiator_ready_int    = hreadyout_i[rr];
             end
         end
+        hinitiator_ready_int_q = hinitiator_ready_int | force_bus_idle;
     end
 
     assign hsel_o               = hsel_o_int;
-    assign hinitiatorready_o    = hinitiator_ready_int;
+    assign hinitiatorready_o    = hinitiator_ready_int_q;
 
 //Coverage
 `ifndef VERILATOR
