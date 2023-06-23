@@ -547,7 +547,7 @@ el2_veer_wrapper rvtop (
         .hreset_n            (cptra_noncore_rst_b),
 
         // Initiator 0
-        .hsel_i_0            (1'b1          ),
+        .hsel_i_0            (~fw_update_rst_window),
         .haddr_i_0           (lsu_ahb.haddr ),
         .hwdata_i_0          (lsu_ahb.hwdata),
         .hwrite_i_0          (lsu_ahb.hwrite),
@@ -559,7 +559,7 @@ el2_veer_wrapper rvtop (
         .hrdata_o_0          (lsu_ahb.hrdata),
 
         // Initiator 1
-        .hsel_i_1            (1'b1          ),
+        .hsel_i_1            (~fw_update_rst_window),
         .haddr_i_1           (sb_ahb.haddr  ),
         .hwdata_i_1          (sb_ahb.hwdata ),
         .hwrite_i_1          (sb_ahb.hwrite ),

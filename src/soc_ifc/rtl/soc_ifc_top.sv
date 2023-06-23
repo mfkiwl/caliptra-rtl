@@ -260,7 +260,7 @@ apb_slv_sif #(
 )
 i_apb_slv_sif_soc_ifc (
     //AMBA APB INF
-    .PCLK(clk),
+    .PCLK(soc_ifc_clk_cg),
     .PRESETn(cptra_rst_b),
     .PADDR(paddr_i),
     .PPROT('0),
@@ -449,7 +449,7 @@ logic cptra_in_dbg_or_manuf_mode;
 assign cptra_in_dbg_or_manuf_mode = ~(security_state.debug_locked) | 
                                      ((security_state.debug_locked) & (security_state.device_lifecycle == DEVICE_MANUFACTURING));
 
-always_ff @(posedge clk or negedge cptra_rst_b) begin
+always_ff @(posedge soc_ifc_clk_cg or negedge cptra_rst_b) begin
     if (~cptra_rst_b) begin
         BootFSM_BrkPoint_Latched <= 0;
         BootFSM_BrkPoint_Flag <= 0;
@@ -463,7 +463,7 @@ always_ff @(posedge clk or negedge cptra_rst_b) begin
 end
 
 // pwrgood_hint informs if the powergood toggled
-always_ff @(posedge clk or negedge cptra_pwrgood) begin
+always_ff @(posedge soc_ifc_clk_cg or negedge cptra_pwrgood) begin
      if(~cptra_pwrgood) begin
         pwrgood_toggle_hint <= 1;
      end
@@ -473,7 +473,7 @@ always_ff @(posedge clk or negedge cptra_pwrgood) begin
      end
 end
 
-always_ff @(posedge clk or negedge cptra_rst_b) begin
+always_ff @(posedge soc_ifc_clk_cg or negedge cptra_rst_b) begin
     if (~cptra_rst_b) begin
         Warm_Reset_Capture_Flag <= 0;
     end
@@ -536,7 +536,7 @@ always_comb soc_ifc_reg_hwif_in.CPTRA_FUSE_PAUSER_LOCK.LOCK.swwel = soc_ifc_reg_
 // Can't write to RW-able fuses once fuse_done is set (implies the register is being locked using the fuse_wr_done)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-always_ff @(posedge clk or negedge cptra_rst_b) begin
+always_ff @(posedge soc_ifc_clk_cg or negedge cptra_rst_b) begin
     if(~cptra_rst_b) begin
         fuse_wr_done_reg_write_observed <= 0;
     end
@@ -644,7 +644,7 @@ logic s_cpuif_rd_ack_nc;
 logic s_cpuif_wr_ack_nc;
 
 soc_ifc_reg i_soc_ifc_reg (
-    .clk(clk),
+    .clk(soc_ifc_clk_cg),
     .rst('0),
     //qualify request so no addresses alias
     .s_cpuif_req(soc_ifc_reg_req_dv & (soc_ifc_reg_req_data.addr[SOC_IFC_ADDR_W-1:SOC_IFC_REG_ADDR_WIDTH] == SOC_IFC_REG_START_ADDR[SOC_IFC_ADDR_W-1:SOC_IFC_REG_ADDR_WIDTH])),
@@ -687,7 +687,7 @@ assign nmi_intr = t2_timeout && !timer2_en;             //Only issue nmi if WDT 
 // sets CPTRA_FW_ERROR_FATAL or when a HW condition occurs that sets a bit
 // in CPTRA_HW_ERROR_FATAL
 // Interrupt only deasserts on reset
-always_ff@(posedge clk or negedge cptra_rst_b) begin
+always_ff@(posedge soc_ifc_clk_cg or negedge cptra_rst_b) begin
     if(~cptra_rst_b) begin
         cptra_error_fatal <= 1'b0;
     end
@@ -708,7 +708,7 @@ always_ff@(posedge clk or negedge cptra_rst_b) begin
         cptra_error_fatal <= cptra_error_fatal;
     end
 end
-always_ff@(posedge clk or negedge cptra_rst_b) begin
+always_ff@(posedge soc_ifc_clk_cg or negedge cptra_rst_b) begin
     if(~cptra_rst_b) begin
         cptra_error_non_fatal <= 1'b0;
     end
@@ -822,7 +822,7 @@ always_comb begin
 end
 
 //Generate t1 and t2 timeout interrupt pulse
-always_ff @(posedge clk or negedge cptra_noncore_rst_b) begin
+always_ff @(posedge soc_ifc_clk_cg or negedge cptra_noncore_rst_b) begin
     if(!cptra_noncore_rst_b) begin
         t1_timeout_f <= 'b0;
         t2_timeout_f <= 'b0;
@@ -841,7 +841,7 @@ always_comb t2_timeout_p = t2_timeout & ~t2_timeout_f;
 //       It would be preferable to decode this from interrupt signals somehow,
 //       but that would require modifying interrupt register RDL which has been
 //       standardized.
-always_ff @(posedge clk or negedge cptra_noncore_rst_b) begin
+always_ff @(posedge soc_ifc_clk_cg or negedge cptra_noncore_rst_b) begin
     if(!cptra_noncore_rst_b) begin
         wdt_error_t1_intr_serviced <= 1'b0;
         wdt_error_t2_intr_serviced <= 1'b0;
@@ -857,7 +857,7 @@ always_ff @(posedge clk or negedge cptra_noncore_rst_b) begin
 end
 
 wdt i_wdt (
-    .clk(clk),
+    .clk(soc_ifc_clk_cg),
     .cptra_rst_b(cptra_noncore_rst_b),
     .timer1_en(timer1_en),
     .timer2_en(timer2_en),

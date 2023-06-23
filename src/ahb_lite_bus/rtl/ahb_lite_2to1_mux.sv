@@ -124,8 +124,8 @@ always_ff @(posedge hclk or negedge hreset_n) begin
         initiator1_pend_hwrite <= initiator1_address_ph & ~initiator1_pend_addr_ph ? hwrite_i_1 : initiator1_pend_hwrite;
 
         //Capture pending address phase when initiators collide
-        initiator0_pend_addr_ph <= (initiator0_address_ph | initiator0_pend_addr_ph) & ~initiator0_gnt;
-        initiator1_pend_addr_ph <= (initiator1_address_ph | initiator1_pend_addr_ph) & ~initiator1_gnt; 
+        initiator0_pend_addr_ph <= (initiator0_address_ph | initiator0_pend_addr_ph) & ~(hreadyout_i & initiator0_gnt);
+        initiator1_pend_addr_ph <= (initiator1_address_ph | initiator1_pend_addr_ph) & ~(hreadyout_i & initiator1_gnt); 
 
         //Transition to data phase when endpoint accepts address phase, hold when not ready
         initiator0_data_ph <= (initiator0_gnt) | (initiator0_data_ph & ~hreadyout_i);
@@ -161,6 +161,10 @@ generate
 
         //Initiator 1 gets through only if initiator 0 isn't getting granted
         always_comb initiator1_gnt = (initiator1_address_ph | initiator1_pend_addr_ph) & ~initiator0_gnt;
+
+        //optimized path doesn't look at stall
+        //only time this stalls is on error condition
+        `CALIPTRA_ASSERT_NEVER(ERR_2TO1MUX_STALL, ~hreadyout_i & (hresp_i == 1'b0), hclk, hreset_n)
     end
 endgenerate
 

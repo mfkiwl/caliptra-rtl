@@ -87,7 +87,10 @@ module ahb_lite_address_decoder #(
     logic                                               hresp_error;
     logic                                               hresp_error_r;
 
+    logic [1:0]                                         htrans_q;
 
+
+    always_comb htrans_q = force_bus_idle ? AHB_XFER_IDLE : htrans_i;
 
     // Decode the address to appropriate Responder HSEL
     genvar resp_num;
@@ -103,7 +106,7 @@ module ahb_lite_address_decoder #(
     always @(posedge hclk or negedge hreset_n) begin
         if (!hreset_n)
             access_blocked_o <= '0;
-        else if (|htrans_i && hinitiator_ready_int_q && |hsel_blocked)
+        else if (|htrans_q && hinitiator_ready_int_q && |hsel_blocked)
             access_blocked_o <= hsel_blocked;
         else
             access_blocked_o <= '0;
@@ -112,7 +115,7 @@ module ahb_lite_address_decoder #(
     always @(posedge hclk or negedge hreset_n) begin
         if (!hreset_n)
             pending_hsel    <= '0;
-        else if (|htrans_i && hinitiator_ready_int_q)
+        else if (|htrans_q && hinitiator_ready_int_q)
             pending_hsel    <= hsel_o_int;
         else if (hinitiator_ready_int_q)
             pending_hsel    <= '0;
@@ -121,7 +124,7 @@ module ahb_lite_address_decoder #(
     always_comb begin
         // Only flag errors for NONSEQ or SEQ type transfers
         // (BUSY transfers require OKAY response)
-        hresp_error = htrans_i inside {AHB_XFER_NONSEQ, AHB_XFER_SEQ} && hinitiator_ready_int_q && ~|hsel_o_int;
+        hresp_error = htrans_q inside {AHB_XFER_NONSEQ, AHB_XFER_SEQ} && hinitiator_ready_int_q && ~|hsel_o_int;
     end
 
     always @(posedge hclk or negedge hreset_n) begin
@@ -148,7 +151,7 @@ module ahb_lite_address_decoder #(
         for (int rr = 0; rr < NUM_RESPONDERS; rr++) begin
             hresponderready_o[rr]    = hinitiator_ready_int_q;
             hwrite_o[rr]             = hwrite_i;
-            htrans_o[rr]             = htrans_i;
+            htrans_o[rr]             = htrans_q;
             hsize_o[rr]              = hsize_i;
             haddr_o[rr]              = haddr_i;
             hwdata_o[rr]             = hwdata_i;
