@@ -63,6 +63,7 @@ logic fsm_synch_noncore_rst_b;
 logic synch_noncore_rst_b;
 logic fsm_synch_uc_rst_b;
 logic synch_uc_rst_b;
+logic fsm_ready_for_fuses;
 
 logic fsm_iccm_unlock;
 logic [7:0] wait_count;
@@ -73,7 +74,7 @@ logic cptra_rst_window,cptra_rst_window_f;
 logic cptra_rst_window_2f, cptra_rst_window_3f, cptra_rst_window_4f;
 
 //move to fuse state when SoC de-asserts reset
-always_comb arc_BOOT_IDLE_BOOT_FUSE = (boot_fsm_ps == BOOT_IDLE) & ~cptra_rst_window_2f;
+always_comb arc_BOOT_IDLE_BOOT_FUSE = (boot_fsm_ps == BOOT_IDLE) & ~cptra_rst_window_2f & ~cptra_rst_window_3f & ~cptra_rst_window_4f;
 //move from fuse state to done when fuse done register is set OR
 //if it was already set (since its locked across warm reset), that the write was observed from SOC
 always_comb arc_BOOT_FUSE_BOOT_DONE = fuse_done & fuse_wr_done_observed;
@@ -106,6 +107,7 @@ always_comb arc_BOOT_WAIT_BOOT_DONE = (wait_count == '0) & ~(BootFSM_BrkPoint & 
 
 always_comb begin
     boot_fsm_ns = boot_fsm_ps;
+    fsm_ready_for_fuses = '0;
     fw_upd_rst_executed = '0;
     fsm_synch_noncore_rst_b = '0;
     fsm_iccm_unlock = '0;
@@ -136,6 +138,7 @@ always_comb begin
                     boot_fsm_ns = BOOT_DONE;
                 end
             end
+            fsm_ready_for_fuses = '1;
 
             //reset flags
             fsm_synch_uc_rst_b = '0;
@@ -194,6 +197,7 @@ always_comb begin
         end
         default: begin
             boot_fsm_ns = boot_fsm_ps;
+            fsm_ready_for_fuses = '0;
             fw_upd_rst_executed = '0;
             fsm_synch_noncore_rst_b = '0;
             fsm_iccm_unlock = '0;
@@ -241,11 +245,21 @@ assign cptra_uc_rst_b = cptra_uc_rst_b_nq | scan_mode;
 always_ff @(posedge clk or negedge cptra_rst_b) begin
     if (~cptra_rst_b) begin
         cptra_rst_window <= '1;
-        iccm_unlock <= 0;
     end
     else begin
         cptra_rst_window <= 0;
-        iccm_unlock <= fsm_iccm_unlock;
+    end
+end
+
+always_ff @(posedge clk or negedge cptra_noncore_rst_b) begin
+    if (~cptra_noncore_rst_b) begin
+        ready_for_fuses <= '0;
+    end    
+    else if (fuse_wr_done_observed) begin
+        ready_for_fuses <= 1'b0;
+    end
+    else begin
+        ready_for_fuses <=  fsm_ready_for_fuses;
     end
 end
 
@@ -253,12 +267,14 @@ always_ff @(posedge clk or negedge cptra_noncore_rst_b) begin
     if (~cptra_noncore_rst_b) begin
         ready_for_fuses <= '0;
         wait_count <= '0;
-    end
+        iccm_unlock <= 0;
+    end    
     else begin
-        ready_for_fuses <= (boot_fsm_ps == BOOT_FUSE);
+        ready_for_fuses <= (boot_fsm_ps == BOOT_FUSE) && !fuse_wr_done_observed;
         wait_count <= (wait_count_decr && (wait_count != '0)) ? wait_count - 1 :
                                                wait_count_rst ? fw_update_rst_wait_cycles :
                                                                 wait_count ;
+        iccm_unlock <= fsm_iccm_unlock;
     end
 end
 
